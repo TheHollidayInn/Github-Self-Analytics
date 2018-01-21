@@ -3,7 +3,11 @@
     div(v-for='(group, key) in prsGroupedByRepo')
       h2 {{key}}
       .card
-        h3 {{group.length}}
+        h3 PRs: {{group.length}}
+      .card
+        h3 Opened: {{openIssuesThisWeek}}
+      .card
+        h3 Closed: {{closedIssuesThisWeek}}
 </template>
 
 <script>
@@ -16,20 +20,41 @@ export default {
   data () {
     return {
       msg: 'Welcome to Your Vue.js App',
-      prsGroupedByRepo: []
+      prsGroupedByRepo: [],
+      openIssuesThisWeek: 0,
+      closedIssuesThisWeek: 0
     }
   },
   async mounted () {
-    const response = await axios.get('https://api.github.com/search/issues?q=state:open+author:thehollidayinn+type:pr')
-    const items = response.data.items
+    this.getPRs()
+    this.getOpenIssues()
+    this.getClosedIssues()
+  },
+  methods: {
+    async getPRs () {
+      const response = await axios.get('https://api.github.com/search/issues?q=state:open+author:thehollidayinn+type:pr')
+      const items = response.data.items
 
-    const startOfThisWeek = moment().startOf('week')
-    const prsThisWeek = items.filter(item => {
-      return moment(item.updated_at) >= startOfThisWeek
-    })
+      const startOfThisWeek = moment().startOf('week')
+      const prsThisWeek = items.filter(item => {
+        return moment(item.updated_at) >= startOfThisWeek
+      })
 
-    const prsGroupedByRepo = groupBy(prsThisWeek, 'repository_url')
-    this.prsGroupedByRepo = prsGroupedByRepo
+      const prsGroupedByRepo = groupBy(prsThisWeek, 'repository_url')
+      this.prsGroupedByRepo = prsGroupedByRepo
+    },
+    async getOpenIssues () {
+      const startOfThisWeek = moment().startOf('week').subtract(1, 'day');
+      const startOfWeekFormatted = startOfThisWeek.format('Y-MM-D')
+      const response = await axios.get(`https://api.github.com/search/issues?q=is:issue+is:open+created:>${startOfWeekFormatted}+repo:HabitRPG/habitica`)
+      this.openIssuesThisWeek = response.data.items.length
+    },
+    async getClosedIssues () {
+      const startOfThisWeek = moment().startOf('week').subtract(1, 'day');
+      const startOfWeekFormatted = startOfThisWeek.format('Y-MM-D')
+      const response = await axios.get(`https://api.github.com/search/issues?q=is:issue+is:closed+created:>${startOfWeekFormatted}+repo:HabitRPG/habitica`)
+      this.closedIssuesThisWeek = response.data.items.length
+    }
   }
 }
 </script>
